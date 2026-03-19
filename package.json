@@ -1,0 +1,10 @@
+{
+  "name": "worker-google-auth",
+  "version": "1.0.0",
+  "description": "Gera Access Token para Google Sheets via GitHub Actions",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {}
+}
