@@ -2,27 +2,30 @@ name: Run Google Auth Worker
 
 on:
   schedule:
-    # 09:00 UTC = 06:00 AM Brasília
-    - cron: '0 9 * * *'
+    - cron: '0 9 * * *' # 06:00 AM Brasília
   workflow_dispatch:
-    inputs:
-      repo_destino:
-        description: 'Repositório de destino'
-        default: 'operacoesicaiu/worker-hablla-integration'
-        required: true
 
 jobs:
-  generate-token:
+  generate-and-dispatch:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Rodar Script de Autenticação
+      - name: Token para Hablla
         env:
           GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
           GH_PAT: ${{ secrets.GH_PAT }}
-          # Define o destino: prioridade para o input manual, senão usa o padrão fixo
-          REPO_DESTINO: ${{ github.event.inputs.repo_destino || 'operacoesicaiu/worker-hablla-integration' }}
+          # Repositório do Hablla
+          REPO_DESTINO: 'operacoesicaiu/worker-hablla-integration'
+        run: node index.js
+
+      - name: Token para Zoho
+        env:
+          GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
+          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          # Repositório do Zoho (Ajuste o nome se for diferente)
+          REPO_DESTINO: 'operacoesicaiu/worker-zoho-sync' 
         run: node index.js
