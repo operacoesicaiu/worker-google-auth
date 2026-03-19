@@ -1,13 +1,15 @@
 name: Run Google Auth Worker
 
 on:
+  schedule:
+    # 09:00 UTC = 06:00 AM Brasília
+    - cron: '0 9 * * *'
   workflow_dispatch:
     inputs:
       repo_destino:
-        description: 'Repositório de destino (ex: usuario/repo-hablla)'
+        description: 'Repositório de destino'
+        default: 'lojadosapo/worker-hablla-integration'
         required: true
-  repository_dispatch:
-    types: [trigger_auth]
 
 jobs:
   generate-token:
@@ -16,18 +18,11 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Rodar Script de Autenticação
         env:
-          # Segredos do Google
           GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
-          # Token do GitHub para falar com outros repos
           GH_PAT: ${{ secrets.GH_PAT }}
-          # Define o destino: ou vem do clique manual (inputs) ou do trigger automático (client_payload)
-          REPO_DESTINO: ${{ github.event.client_payload.repo_destino || github.event.inputs.repo_destino }}
+          # Define o destino: prioridade para o input manual, senão usa o padrão fixo
+          REPO_DESTINO: ${{ github.event.inputs.repo_destino || 'lojadosapo/worker-hablla-integration' }}
         run: node index.js
