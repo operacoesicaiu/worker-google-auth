@@ -8,7 +8,7 @@ on:
     inputs:
       repo_destino:
         description: 'Repositório de destino'
-        default: 'lojadosapo/worker-hablla-integration'
+        default: 'operacoesicaiu/worker-hablla-integration'
         required: true
 
 jobs:
@@ -24,5 +24,5 @@ jobs:
           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
           GH_PAT: ${{ secrets.GH_PAT }}
           # Define o destino: prioridade para o input manual, senão usa o padrão fixo
-          REPO_DESTINO: ${{ github.event.inputs.repo_destino || 'lojadosapo/worker-hablla-integration' }}
+          REPO_DESTINO: ${{ github.event.inputs.repo_destino || 'operacoesicaiu/worker-hablla-integration' }}
         run: node index.js
