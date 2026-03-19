@@ -1,8 +1,12 @@
 name: Run Google Auth Worker
 
 on:
-  workflow_dispatch: # Permite rodar manualmente pelo botão
-  repository_dispatch: # Permite que outro repo chame este
+  workflow_dispatch:
+    inputs:
+      repo_destino:
+        description: 'Repositório de destino (ex: usuario/repo-hablla)'
+        required: true
+  repository_dispatch:
     types: [trigger_auth]
 
 jobs:
@@ -19,6 +23,11 @@ jobs:
 
       - name: Rodar Script de Autenticação
         env:
+          # Segredos do Google
           GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+          # Token do GitHub para falar com outros repos
+          GH_PAT: ${{ secrets.GH_PAT }}
+          # Define o destino: ou vem do clique manual (inputs) ou do trigger automático (client_payload)
+          REPO_DESTINO: ${{ github.event.client_payload.repo_destino || github.event.inputs.repo_destino }}
         run: node index.js
