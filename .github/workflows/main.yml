@@ -1,0 +1,24 @@
+name: Run Google Auth Worker
+
+on:
+  workflow_dispatch: # Permite rodar manualmente pelo botão
+  repository_dispatch: # Permite que outro repo chame este
+    types: [trigger_auth]
+
+jobs:
+  generate-token:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Rodar Script de Autenticação
+        env:
+          GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
+          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+        run: node index.js
