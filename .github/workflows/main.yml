@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 9 * * *' # 06:00 AM Brasília
   workflow_dispatch:
+    inputs:
+      repo_especifico:
+        description: 'Repositório específico (Ex: operacoesicaiu/worker-zoho-sync). Deixe VAZIO para rodar TODOS.'
+        required: false
+        default: ''
 
 jobs:
   generate-and-dispatch:
@@ -12,20 +17,24 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Token para Hablla
+      - name: Executar Disparos
         env:
           GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
           GH_PAT: ${{ secrets.GH_PAT }}
-          # Repositório do Hablla
-          REPO_DESTINO: 'operacoesicaiu/worker-hablla-integration'
-        run: node index.js
-
-      - name: Token para Zoho
-        env:
-          GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
-          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
-          GH_PAT: ${{ secrets.GH_PAT }}
-          # Repositório do Zoho (Ajuste o nome se for diferente)
-          REPO_DESTINO: 'operacoesicaiu/worker-zoho-sync' 
-        run: node index.js
+        run: |
+          # 1. Se o usuário digitou um repositório manual no input
+          if [ "${{ github.event.inputs.repo_especifico }}" != "" ]; then
+            echo "Rodando apenas para repositório manual: ${{ github.event.inputs.repo_especifico }}"
+            REPO_DESTINO="${{ github.event.inputs.repo_especifico }}" node index.js
+          
+          # 2. Se for agendamento (cron) ou input vazio, roda a lista padrão
+          else
+            echo "Iniciando disparos padrão (Hablla e Zoho)..."
+            
+            echo "Enviando para Hablla..."
+            REPO_DESTINO="operacoesicaiu/worker-hablla-integration" node index.js
+            
+            echo "Enviando para Zoho..."
+            REPO_DESTINO="operacoesicaiu/worker-zoho-sync" node index.js
+          fi
