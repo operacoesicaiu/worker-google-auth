@@ -30,11 +30,14 @@ jobs:
           
           # 2. Se for agendamento (cron) ou input vazio, roda a lista padrão
           else
-            echo "Iniciando disparos padrão (Hablla e Zoho)..."
+            echo "Iniciando disparos padrão (Hablla, Zoho e Zenvia)..."
             
             echo "Enviando para Hablla..."
             REPO_DESTINO="operacoesicaiu/worker-hablla-integration" node index.js
             
             echo "Enviando para Zoho..."
             REPO_DESTINO="operacoesicaiu/worker-zoho-sync" node index.js
+
+            echo "Enviando para Zenvia..."
+            REPO_DESTINO="operacoesicaiu/worker-zenvia-integration" node index.js
           fi
