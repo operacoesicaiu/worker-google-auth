@@ -66,6 +66,31 @@ async function run() {
         }));
         dispatchReq.end();
 
+        // --- REGISTRO DE ATIVIDADE NO MONITOR ---
+        const logMsg = repo_destino.includes("hablla") || repo_destino.includes("zoho") 
+            ? "Sync diário: Hablla, Zoho e Zenvia disparados." 
+            : `Execução individual: ${repo_destino}`;
+
+        const logPayload = JSON.stringify({
+            event_type: "log_event",
+            client_payload: { message: logMsg }
+        });
+
+        const logReq = https.request(
+            `https://api.github.com/repos/operacoesicaiu/cloud-operations-monitor/dispatches`, 
+            {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${gh_token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'Google-Auth-Orchestrator'
+                }
+            }
+        );
+
+        logReq.write(logPayload);
+        logReq.end();
+
     } catch (err) {
         console.error("Erro no processo silencioso.");
         process.exit(1);
