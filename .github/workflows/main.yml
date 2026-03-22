@@ -36,7 +36,7 @@ jobs:
             REPO_DESTINO="operacoesicaiu/worker-hablla-integration" node index.js
             
             echo "Enviando para Zoho..."
-            REPO_DESTINO="operacoesicaiu/worker-zoho-sync" node index.js
+            REPO_DESTINO="operacoesicaiu/worker-zoho-integration" node index.js
 
             echo "Enviando para Zenvia..."
             REPO_DESTINO="operacoesicaiu/worker-zenvia-integration" node index.js
