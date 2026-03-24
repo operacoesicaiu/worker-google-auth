@@ -67,9 +67,8 @@ async function run() {
         dispatchReq.end();
 
         // --- REGISTRO DE ATIVIDADE NO MONITOR ---
-        const logMsg = repo_destino.includes("hablla") || repo_destino.includes("zoho") 
-            ? "Sync diário: Hablla, Zoho e Zenvia disparados." 
-            : `Execução individual: ${repo_destino}`;
+        const nomeWorker = repo_destino.split('/').pop();
+        const logMsg = `Execução: ${nomeWorker} disparada com sucesso.`;
 
         const logPayload = JSON.stringify({
             event_type: "log_event",
@@ -96,5 +95,4 @@ async function run() {
         process.exit(1);
     }
 }
-
 run();
