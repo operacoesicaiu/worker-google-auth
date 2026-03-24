@@ -56,8 +56,8 @@ async function run() {
                 'User-Agent': 'Central-Auth-Bot'
             }
         }, (res) => {
-            if (res.statusCode === 204) console.log("✅ Token entregue com sucesso.");
-            else console.log("❌ Falha na entrega. Status:", res.statusCode);
+            if (res.statusCode === 204) console.log("Token entregue com sucesso.");
+            else console.log("Falha na entrega. Status:", res.statusCode);
         });
 
         dispatchReq.write(JSON.stringify({
