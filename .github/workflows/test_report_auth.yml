@@ -13,7 +13,6 @@ jobs:
           GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
           GH_PAT: ${{ secrets.GH_PAT }}
-          # Aqui está o segredo:
           REPO_DESTINO: "operacoesicaiu/worker-zoho-integration" 
         run: |
           sed -i 's/google_token_ready/report_token_ready/g' index.js
