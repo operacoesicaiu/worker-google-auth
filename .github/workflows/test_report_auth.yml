@@ -1,0 +1,20 @@
+name: Teste Relatorio 2 Meses (Manual)
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  test-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Disparar Token de Relatorio
+        env:
+          GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
+          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          # Aqui está o segredo:
+          REPO_DESTINO: "operacoesicaiu/worker-zoho-integration" 
+        run: |
+          sed -i 's/google_token_ready/report_token_ready/g' index.js
+          node index.js
