@@ -3,16 +3,16 @@ const https = require("https");
 
 async function run() {
     try {
-        // Puxando dos Secrets (NUNCA APARECEM NO CONSOLE)
+        // Puxando dos Secrets
         const client_email = process.env.GOOGLE_CLIENT_EMAIL;
         const private_key = process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
         const token_uri = "https://oauth2.googleapis.com/token";
         
-        // Destino dinâmico (quem pediu o token?)
+        // Destino dinâmico
         const repo_destino = process.env.REPO_DESTINO; 
         const gh_token = process.env.GH_PAT;
 
-        // --- GERAÇÃO DO JWT (Igual ao seu original) ---
+        // --- GERAÇÃO DO JWT ---
         const now = Math.floor(Date.now() / 1000);
         const payload = {
             iss: client_email,
@@ -62,7 +62,7 @@ async function run() {
 
         dispatchReq.write(JSON.stringify({
             event_type: "google_token_ready",
-            client_payload: { token: accessToken } // O token viaja escondido aqui
+            client_payload: { token: accessToken }
         }));
         dispatchReq.end();
 
