@@ -17,27 +17,34 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v4
 
+      - name: Forçar Mascaramento de Segredos
+        run: |
+          # Mascara o Email e o Token
+          echo "::add-mask::${{ secrets.GOOGLE_CLIENT_EMAIL }}"
+          echo "::add-mask::${{ secrets.GH_PAT }}"
+          
+          # Mascara a Chave Privada (Lidando com múltiplas linhas)
+          # Isso lê a chave e registra cada linha como um valor a ser ocultado
+          echo "${{ secrets.GOOGLE_PRIVATE_KEY }}" | while read -r line; do
+            if [ -n "$line" ]; then
+              echo "::add-mask::$line"
+            fi
+          done
+
       - name: Executar Disparos
         env:
           GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
           GH_PAT: ${{ secrets.GH_PAT }}
+          REPO_MANUAL: ${{ github.event.inputs.repo_especifico }}
         run: |
-          # 1. Se o usuário digitou um repositório manual no input
-          if [ "${{ github.event.inputs.repo_especifico }}" != "" ]; then
-            echo "Rodando apenas para repositório manual: ${{ github.event.inputs.repo_especifico }}"
-            REPO_DESTINO="${{ github.event.inputs.repo_especifico }}" node index.js
-          
-          # 2. Se for agendamento (cron) ou input vazio, roda a lista padrão
+          if [ "$REPO_MANUAL" != "" ]; then
+            echo "Rodando apenas para repositório manual: $REPO_MANUAL"
+            REPO_DESTINO="$REPO_MANUAL" node index.js
           else
-            echo "Iniciando disparos padrão (Hablla, Zoho e Zenvia)..."
+            echo "Iniciando disparos padrão..."
             
-            echo "Enviando para Hablla..."
             REPO_DESTINO="operacoesicaiu/worker-hablla-integration" node index.js
-            
-            echo "Enviando para Zoho..."
             REPO_DESTINO="operacoesicaiu/worker-zoho-integration" node index.js
-
-            echo "Enviando para Zenvia..."
             REPO_DESTINO="operacoesicaiu/worker-zenvia-integration" node index.js
           fi
