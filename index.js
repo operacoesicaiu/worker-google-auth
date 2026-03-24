@@ -1,18 +1,35 @@
 const crypto = require("crypto");
 const https = require("https");
 
+// Função para mascarar dados sensíveis
+function maskSensitiveData(data, maxLength = 8) {
+    if (!data || typeof data !== 'string') return '[MASKED]';
+    if (data.length <= maxLength) return '[MASKED]';
+    return data.substring(0, 4) + '*'.repeat(data.length - 8) + data.substring(data.length - 4);
+}
+
+// Função para registrar eventos sem expor dados sensíveis
+function secureLog(message, isError = false) {
+    const timestamp = new Date().toISOString();
+    const logLevel = isError ? 'ERROR' : 'INFO';
+    console.log(`[${timestamp}] [${logLevel}] ${message}`);
+}
+
 async function run() {
     try {
-        // Puxando dos Secrets
+        // Validação de variáveis essenciais
         const client_email = process.env.GOOGLE_CLIENT_EMAIL;
         const private_key = process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
         const token_uri = "https://oauth2.googleapis.com/token";
-        
-        // Destino dinâmico
         const repo_destino = process.env.REPO_DESTINO; 
         const gh_token = process.env.GH_PAT;
 
-        // --- GERAÇÃO DO JWT ---
+        if (!client_email || !private_key || !repo_destino || !gh_token) {
+            secureLog("Variáveis de ambiente críticas ausentes", true);
+            process.exit(1);
+        }
+
+        // Geração do JWT
         const now = Math.floor(Date.now() / 1000);
         const payload = {
             iss: client_email,
@@ -28,25 +45,45 @@ async function run() {
         const signature = signer.sign(private_key, "base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
         const jwt = `${tokenToSign}.${signature}`;
 
-        // --- SOLICITAÇÃO DO ACCESS TOKEN ---
+        // Solicitação do Access Token
         const postData = `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`;
         
         const accessToken = await new Promise((resolve, reject) => {
             const req = https.request(token_uri, {
                 method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+                headers: { 
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "User-Agent": "Google-Auth-Worker/1.0"
+                }
             }, res => {
                 let data = "";
                 res.on("data", c => data += c);
-                res.on("end", () => resolve(JSON.parse(data).access_token));
+                res.on("end", () => {
+                    try {
+                        const response = JSON.parse(data);
+                        if (response.access_token) {
+                            resolve(response.access_token);
+                        } else {
+                            reject(new Error("Token não retornado pela API"));
+                        }
+                    } catch (parseError) {
+                        reject(new Error("Resposta inválida da API de autenticação"));
+                    }
+                });
             });
             req.on("error", reject);
             req.write(postData);
             req.end();
         });
 
-        // ENVIO DIRETO (SEM LOGS)
-        console.log(`[Segurança] Despachando token para: ${repo_destino}...`);
+        // Validação do token obtido
+        if (!accessToken) {
+            secureLog("Token de acesso não gerado", true);
+            process.exit(1);
+        }
+
+        // Envio do token para repositórios
+        secureLog(`Despachando token para: ${repo_destino}`);
 
         const dispatchReq = https.request(`https://api.github.com/repos/${repo_destino}/dispatches`, {
             method: 'POST',
@@ -56,8 +93,11 @@ async function run() {
                 'User-Agent': 'Central-Auth-Bot'
             }
         }, (res) => {
-            if (res.statusCode === 204) console.log("Token entregue com sucesso.");
-            else console.log("Falha na entrega. Status:", res.statusCode);
+            if (res.statusCode === 204) {
+                secureLog("Token entregue com sucesso");
+            } else {
+                secureLog(`Falha na entrega. Status: ${res.statusCode}`, true);
+            }
         });
 
         dispatchReq.write(JSON.stringify({
@@ -66,7 +106,7 @@ async function run() {
         }));
         dispatchReq.end();
 
-        // --- REGISTRO DE ATIVIDADE NO MONITOR ---
+        // Registro de atividade no monitor
         const nomeWorker = repo_destino.split('/').pop();
         const logMsg = `Execução: ${nomeWorker} disparada com sucesso.`;
 
@@ -90,8 +130,10 @@ async function run() {
         logReq.write(logPayload);
         logReq.end();
 
+        secureLog("Processo concluído com sucesso");
+
     } catch (err) {
-        console.error("Erro no processo silencioso.");
+        secureLog("Erro no processo de autenticação", true);
         process.exit(1);
     }
 }
