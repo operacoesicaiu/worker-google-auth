@@ -22,17 +22,6 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Explicit Secret Masking
-        run: |
-          echo "::add-mask::${{ secrets.GOOGLE_CLIENT_EMAIL }}"
-          echo "::add-mask::${{ secrets.GH_PAT }}"
-          
-          echo "${{ secrets.GOOGLE_PRIVATE_KEY }}" | while read -r line; do
-            if [ -n "$line" ]; then
-              echo "::add-mask::$line"
-            fi
-          done
-
       - name: Executar Disparos
         env:
           GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
