@@ -13,18 +13,20 @@ on:
 jobs:
   generate-and-dispatch:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Forçar Mascaramento de Segredos
+      - name: Explicit Secret Masking
         run: |
-          # Mascara o Email e o Token
           echo "::add-mask::${{ secrets.GOOGLE_CLIENT_EMAIL }}"
           echo "::add-mask::${{ secrets.GH_PAT }}"
           
-          # Mascara a Chave Privada (Lidando com múltiplas linhas)
-          # Isso lê a chave e registra cada linha como um valor a ser ocultado
           echo "${{ secrets.GOOGLE_PRIVATE_KEY }}" | while read -r line; do
             if [ -n "$line" ]; then
               echo "::add-mask::$line"

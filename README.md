@@ -1,345 +1,123 @@
-# Worker Google Auth
+# Google Auth Worker
 
-## Visão Geral
+A Node.js worker service responsible for generating and distributing Google OAuth tokens to other integration services.
 
-O Worker Google Auth é um componente essencial do ecossistema de integração que gera tokens de acesso para Google Sheets através do fluxo OAuth2. Este worker atua como orquestrador central, distribuindo tokens para outros workers que necessitam de acesso às planilhas do Google.
+## Overview
 
-## Arquitetura do Sistema
+This worker automates the process of generating Google OAuth access tokens using service account credentials and distributing them to various integration workers that require Google API access.
 
+## Features
+
+- **OAuth Token Generation**: Automatically generates Google OAuth access tokens
+- **Service Account Authentication**: Uses Google Service Account credentials for authentication
+- **Token Distribution**: Distributes tokens to multiple integration workers via GitHub repository dispatch
+- **Scheduled Execution**: Runs automatically via GitHub Actions on a schedule
+- **Manual Execution**: Supports manual triggering with specific repository targeting
+
+## Architecture
+
+### Components
+
+- **Token Generator**: Generates OAuth access tokens using JWT authentication
+- **Token Dispatcher**: Sends tokens to integration workers via GitHub API
+- **Monitoring Integration**: Reports execution status to the central monitoring system
+
+### Integration Points
+
+- **Google APIs**: Authenticates with Google OAuth2 service
+- **GitHub API**: Dispatches tokens to other repositories
+- **Cloud Operations Monitor**: Reports execution status
+
+## Configuration
+
+### Required Environment Variables
+
+```bash
+GOOGLE_CLIENT_EMAIL=your-service-account-email@project.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----\n"
+GH_PAT=your_github_personal_access_token
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   GitHub        │    │   Worker Google  │    │   Workers       │
-│   Actions       │───▶│   Auth           │───▶│   Destino       │
-│   Scheduler     │    │   (Orquestrador) │    │   (Zenvia,      │
-└─────────────────┘    └──────────────────┘    │   Zoho, etc)    │
-                                               └─────────────────┘
-```
 
-## Fluxo de Operação
+### GitHub Secrets
 
-### 1. Geração de Token JWT
-- **Entrada**: Credenciais do Google Service Account (Client Email, Private Key)
-- **Processo**: Criação de JWT assinado com algoritmo RS256
-- **Saída**: JWT pronto para troca por Access Token
+The following secrets must be configured in the GitHub repository:
 
-### 2. Troca por Access Token
-- **Endpoint**: `https://oauth2.googleapis.com/token`
-- **Método**: POST com grant_type `urn:ietf:params:oauth:grant-type:jwt-bearer`
-- **Validade**: 1 hora (3600 segundos)
+- `GOOGLE_CLIENT_EMAIL`: Google Service Account email address
+- `GOOGLE_PRIVATE_KEY`: Google Service Account private key (with proper escaping)
+- `GH_PAT`: GitHub Personal Access Token with repository dispatch permissions
 
-### 3. Distribuição de Tokens
-- **Destino**: Repositórios configurados via `REPO_DESTINO`
-- **Evento**: `google_token_ready` via GitHub API Dispatch
-- **Payload**: Token de acesso encriptado
+## Usage
 
-## Segurança Implementada
+### Automatic Execution
 
-### 🔒 **Proteção de Dados Sensíveis**
-- **Mascaramento**: Função `maskSensitiveData()` oculta credenciais nos logs
-- **Logging Seguro**: Função `secureLog()` registra eventos sem expor dados
-- **Validação**: Verificação de variáveis essenciais antes da execução
+The worker runs automatically every day at 06:00 AM Brasília time via GitHub Actions:
 
-### 🛡️ **Proteção contra Vazamentos**
-- **Zero Logs Sensíveis**: Nenhum token ou credencial aparece nos logs
-- **Erros Genéricos**: Mensagens de erro sem detalhes que possam comprometer segurança
-- **Timeout Controlado**: Requisições com timeouts para evitar falhas silenciosas
-
-### 🔐 **Comunicação Segura**
-- **HTTPS Exclusivo**: Todas as chamadas externas usam conexão criptografada
-- **Headers de Segurança**: Identificação clara do agente sem expor informações sensíveis
-- **Autenticação**: Uso de tokens de acesso em vez de credenciais permanentes
-
-## Configuração de Segredos
-
-### Requisitos Mínimos
 ```yaml
-GOOGLE_CLIENT_EMAIL: "service-account@project.iam.gserviceaccount.com"
-GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBAD..."
-GH_PAT: "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-REPO_DESTINO: "operacoesicaiu/worker-zenvia-integration"
+schedule:
+  - cron: '0 9 * * *' # 06:00 AM Brasília
 ```
 
-### Segurança dos Segredos
-- **Armazenamento**: Secrets do GitHub Actions (criptografados)
-- **Acesso**: Apenas workers autorizados podem acessar
-- **Rotação**: Recomendado rotacionar chaves periodicamente
+### Manual Execution
 
-## Monitoramento e Logs
+Trigger the workflow manually with optional repository targeting:
 
-### Estratégia de Logs
-- **Formato**: `[TIMESTAMP] [LEVEL] MESSAGE`
-- **Níveis**: INFO para operações normais, ERROR para falhas
-- **Conteúdo**: Mensagens descritivas sem dados sensíveis
-- **Armazenamento**: Arquivo `daily_uptime.log` no repositório monitor
-
-### Exemplos de Logs Seguros
-```
-[2026-03-24T13:30:15.123Z] [INFO] Iniciando autenticação Zoho
-[2026-03-24T13:30:16.456Z] [INFO] Autenticação Zoho realizada com sucesso
-[2026-03-24T13:30:17.789Z] [INFO] Filtrando registros de ontem (23-Mar-2026)
-```
-
-## Integração com Outros Workers
-
-### Workers Destinatários
-1. **worker-zenvia-integration**: Sincroniza dados da API Zenvia
-2. **worker-zoho-integration**: Sincroniza dados do Zoho Creator
-3. **worker-zenvia-integration**: Sincroniza dados da API Zenvia
-
-### Protocolo de Comunicação
-```json
-{
-  "event_type": "google_token_ready",
-  "client_payload": {
-    "token": "ya29.xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  }
-}
-```
-
-## Estratégia de Escalabilidade
-
-### Distribuição de Carga
-- **Orquestração Central**: Único ponto de geração de tokens
-- **Distribuição Paralela**: Múltiplos workers podem receber tokens simultaneamente
-- **Monitoramento**: Registro de todas as distribuições para auditoria
-
-### Estratégia de Failover
-- **Validação de Token**: Verificação antes da distribuição
-- **Retentativas**: Lógica de retry para falhas de comunicação
-- **Fallback**: Alternativas caso algum worker não responda
-
-## Métricas de Segurança
-
-### Indicadores de Monitoramento
-- **Tempo de Geração**: Média de tempo para gerar tokens
-- **Taxa de Sucesso**: Percentual de distribuições bem-sucedidas
-- **Falhas de Segurança**: Tentativas de acesso não autorizadas
-- **Uso de Recursos**: Consumo de API e tempo de execução
-
-### Alertas de Segurança
-- **Falha na Autenticação**: Erros na geração de JWT
-- **Distribuição Falhada**: Workers que não recebem tokens
-- **Timeout de Requisição**: Respostas lentas da API do Google
-- **Erros de Validação**: Variáveis de ambiente ausentes ou inválidas
-
-## Melhores Práticas
-
-### Para Desenvolvedores
-1. **Nunca use `console.log` para dados sensíveis**
-2. **Sempre valide variáveis de ambiente**
-3. **Use mascaramento para qualquer dado sensível**
-4. **Trate erros sem expor detalhes**
-
-### Para Operações
-1. **Monitorar logs regularmente** para detectar anomalias
-2. **Rotacionar segredos periodicamente** para manter a segurança
-3. **Testar failover** para garantir disponibilidade
-4. **Auditar permissões** de acesso aos segredos
-
-## Conformidade e Auditoria
-
-### Registros de Auditoria
-- **Operações de Token**: Registro de todas as gerações e distribuições
-- **Acessos aos Segredos**: Log de quem e quando acessou credenciais
-- **Falhas de Segurança**: Registro detalhado de incidentes de segurança
-- **Alterações de Configuração**: Histórico de mudanças nas configurações
-
-### Relatórios de Conformidade
-- **Relatórios Diários**: Resumo das operações do dia
-- **Relatórios Semanais**: Análise de performance e segurança
-- **Relatórios Mensais**: Conformidade com políticas de segurança
-- **Incidentes de Segurança**: Documentação completa de incidentes
-
-## Documentação Técnica
-
-### Estrutura de Código
-```
-worker-google-auth/
-├── index.js              # Lógica principal de autenticação
-├── .github/workflows/    # Configuração do GitHub Actions
-│   ├── main.yml         # Execução programada
-│   └── test_report_auth.yml # Testes de relatório
-└── README.md            # Documentação do projeto
-```
-
-### Dependências
-- **Node.js**: Versão 20+ recomendada
-- **Módulos Nativos**: `crypto`, `https` (sem dependências externas)
-- **APIs Externas**: Google OAuth2, GitHub API
-
-### Performance
-- **Tempo de Execução**: ~5-10 segundos por ciclo
-- **Uso de Memória**: <50MB
-- **Consumo de API**: 1 requisição ao Google + N requisições ao GitHub
-- **Escalabilidade**: Suporta até 10 workers simultâneos
-
-## Suporte e Manutenção
-
-### Contatos de Suporte
-- **Desenvolvimento**: pklavc@gmail.com
-- **Operações**: [Definir contato interno]
-- **Segurança**: [Definir contato de segurança]
-
-### Procedimentos de Manutenção
-1. **Atualizações de Segurança**: Aplicar patches semanalmente
-2. **Rotatividade de Chaves**: Renovar chaves a cada 90 dias
-3. **Auditoria de Logs**: Revisão mensal de logs de segurança
-4. **Testes de Integração**: Validar integração com workers semanalmente
-
----
-
-## Security Overview
-
-### Security Measures Implemented
-
-#### 🔒 **Sensitive Data Protection**
-- **Data Masking**: `maskSensitiveData()` function hides credentials in logs
-- **Secure Logging**: `secureLog()` function logs events without exposing data
-- **Validation**: Verification of essential variables before execution
-
-#### 🛡️ **Leak Prevention**
-- **Zero Sensitive Logs**: No tokens or credentials appear in logs
-- **Generic Errors**: Error messages without details that could compromise security
-- **Controlled Timeout**: Requests with timeouts to prevent silent failures
-
-#### 🔐 **Secure Communication**
-- **HTTPS Only**: All external calls use encrypted connection
-- **Security Headers**: Clear agent identification without exposing sensitive information
-- **Authentication**: Use of access tokens instead of permanent credentials
-
-### Security Configuration
-
-#### Minimum Requirements
 ```yaml
-GOOGLE_CLIENT_EMAIL: "service-account@project.iam.gserviceaccount.com"
-GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBAD..."
-GH_PAT: "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-REPO_DESTINO: "operacoesicaiu/worker-zenvia-integration"
+workflow_dispatch:
+  inputs:
+    repo_especifico:
+      description: 'Specific repository (e.g., operacoesicaiu/worker-zoho-sync). Leave EMPTY to run ALL.'
+      required: false
+      default: ''
 ```
 
-#### Secret Security
-- **Storage**: GitHub Actions secrets (encrypted)
-- **Access**: Only authorized workers can access
-- **Rotation**: Recommended to rotate keys periodically
+### Target Repositories
 
-### Security Monitoring
+By default, the worker dispatches tokens to:
+- `operacoesicaiu/worker-hablla-integration`
+- `operacoesicaiu/worker-zoho-integration`
+- `operacoesicaiu/worker-zenvia-integration`
 
-#### Log Strategy
-- **Format**: `[TIMESTAMP] [LEVEL] MESSAGE`
-- **Levels**: INFO for normal operations, ERROR for failures
-- **Content**: Descriptive messages without sensitive data
-- **Storage**: `daily_uptime.log` file in monitor repository
+## Security Features
 
-#### Secure Log Examples
-```
-[2026-03-24T13:30:15.123Z] [INFO] Starting Zoho authentication
-[2026-03-24T13:30:16.456Z] [INFO] Zoho authentication completed successfully
-[2026-03-24T13:30:17.789Z] [INFO] Filtering records from yesterday (23-Mar-2026)
-```
+- **Secure Token Generation**: Uses JWT authentication with service account credentials
+- **Token Masking**: All sensitive data is masked in logs
+- **Environment Variables**: Credentials stored securely as environment variables
+- **Minimal Permissions**: GitHub Actions workflows use minimal required permissions
 
-### Security Metrics
+## Monitoring
 
-#### Monitoring Indicators
-- **Generation Time**: Average time to generate tokens
-- **Success Rate**: Percentage of successful distributions
-- **Security Failures**: Unauthorized access attempts
-- **Resource Usage**: API consumption and execution time
+Execution status is reported to the central monitoring system:
+- Success/failure status
+- Execution timestamps
+- Error details (with sensitive data masked)
 
-#### Security Alerts
-- **Authentication Failure**: Errors in JWT generation
-- **Distribution Failed**: Workers that don't receive tokens
-- **Request Timeout**: Slow responses from Google API
-- **Validation Errors**: Missing or invalid environment variables
+## Troubleshooting
 
-### Compliance and Auditing
+### Common Issues
 
-#### Audit Records
-- **Token Operations**: Record of all generations and distributions
-- **Secret Access**: Log of who and when accessed credentials
-- **Security Incidents**: Detailed record of security incidents
-- **Configuration Changes**: History of configuration changes
+1. **Invalid Credentials**: Verify service account email and private key
+2. **Insufficient Permissions**: Ensure GitHub PAT has repository dispatch permissions
+3. **Network Issues**: Check connectivity to Google OAuth2 endpoints
 
-#### Compliance Reports
-- **Daily Reports**: Summary of daily operations
-- **Weekly Reports**: Performance and security analysis
-- **Monthly Reports**: Compliance with security policies
-- **Security Incidents**: Complete documentation of incidents
+### Logs
 
----
+All execution logs are processed through secure logging functions that:
+- Mask sensitive information
+- Include timestamps and log levels
+- Report to the monitoring system
 
-## Segurança dos Repositórios Públicos
+## Contributing
 
-### Medidas de Segurança Implementadas
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for your changes
+5. Submit a pull request
 
-#### 🔒 **Proteção de Dados Sensíveis**
-- **Mascaramento de Dados**: Função `maskSensitiveData()` oculta credenciais nos logs
-- **Registro Seguro**: Função `secureLog()` registra eventos sem expor dados
-- **Validação**: Verificação de variáveis essenciais antes da execução
+## License
 
-#### 🛡️ **Proteção contra Vazamentos**
-- **Zero Logs Sensíveis**: Nenhum token ou credencial aparece nos logs
-- **Erros Genéricos**: Mensagens de erro sem detalhes que possam comprometer segurança
-- **Timeout Controlado**: Requisições com timeouts para evitar falhas silenciosas
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-#### 🔐 **Comunicação Segura**
-- **HTTPS Exclusivo**: Todas as chamadas externas usam conexão criptografada
-- **Headers de Segurança**: Identificação clara do agente sem expor informações sensíveis
-- **Autenticação**: Uso de tokens de acesso em vez de credenciais permanentes
+## Support
 
-### Configuração de Segurança
-
-#### Requisitos Mínimos
-```yaml
-GOOGLE_CLIENT_EMAIL: "service-account@project.iam.gserviceaccount.com"
-GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBAD..."
-GH_PAT: "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-REPO_DESTINO: "operacoesicaiu/worker-zenvia-integration"
-```
-
-#### Segurança dos Segredos
-- **Armazenamento**: Secrets do GitHub Actions (criptografados)
-- **Acesso**: Apenas workers autorizados podem acessar
-- **Rotação**: Recomendado rotacionar chaves periodicamente
-
-### Monitoramento de Segurança
-
-#### Estratégia de Logs
-- **Formato**: `[TIMESTAMP] [LEVEL] MESSAGE`
-- **Níveis**: INFO para operações normais, ERROR para falhas
-- **Conteúdo**: Mensagens descritivas sem dados sensíveis
-- **Armazenamento**: Arquivo `daily_uptime.log` no repositório monitor
-
-#### Exemplos de Logs Seguros
-```
-[2026-03-24T13:30:15.123Z] [INFO] Iniciando autenticação Zoho
-[2026-03-24T13:30:16.456Z] [INFO] Autenticação Zoho realizada com sucesso
-[2026-03-24T13:30:17.789Z] [INFO] Filtrando registros de ontem (23-Mar-2026)
-```
-
-### Métricas de Segurança
-
-#### Indicadores de Monitoramento
-- **Tempo de Geração**: Média de tempo para gerar tokens
-- **Taxa de Sucesso**: Percentual de distribuições bem-sucedidas
-- **Falhas de Segurança**: Tentativas de acesso não autorizadas
-- **Uso de Recursos**: Consumo de API e tempo de execução
-
-#### Alertas de Segurança
-- **Falha na Autenticação**: Erros na geração de JWT
-- **Distribuição Falhada**: Workers que não recebem tokens
-- **Timeout de Requisição**: Respostas lentas da API do Google
-- **Erros de Validação**: Variáveis de ambiente ausentes ou inválidas
-
-### Conformidade e Auditoria
-
-#### Registros de Auditoria
-- **Operações de Token**: Registro de todas as gerações e distribuições
-- **Acessos aos Segredos**: Log de quem e quando acessou credenciais
-- **Falhas de Segurança**: Registro detalhado de incidentes de segurança
-- **Alterações de Configuração**: Histórico de mudanças nas configurações
-
-#### Relatórios de Conformidade
-- **Relatórios Diários**: Resumo das operações do dia
-- **Relatórios Semanais**: Análise de performance e segurança
-- **Relatórios Mensais**: Conformidade com políticas de segurança
-- **Incidentes de Segurança**: Documentação completa de incidentes
+For support and questions, please contact the development team.

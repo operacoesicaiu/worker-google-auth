@@ -15,6 +15,16 @@ function secureLog(message, isError = false) {
     console.log(`[${timestamp}] [${logLevel}] ${message}`);
 }
 
+// Função para impedir Spreadsheet Formula Injection
+function sanitize(val) {
+    if (typeof val !== 'string') return val;
+    const formulaChars = ['=', '+', '-', '@'];
+    if (formulaChars.some(char => val.startsWith(char))) {
+        return `'${val}`;
+    }
+    return val;
+}
+
 async function run() {
     try {
         // Validação de variáveis essenciais
