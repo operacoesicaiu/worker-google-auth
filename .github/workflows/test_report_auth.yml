@@ -8,11 +8,21 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: read
+      actions: write  # Essencial para gravar o Secret no destino
       id-token: write
     
     steps:
       - uses: actions/checkout@v4
+
+      # --- NOVO: Configura o Node ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # --- NOVO: Instala a biblioteca libsodium ---
+      - name: Instalar dependências
+        run: npm install
 
       - name: Disparar Token de Relatorio
         env:
