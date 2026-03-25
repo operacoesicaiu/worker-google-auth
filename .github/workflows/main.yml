@@ -15,12 +15,22 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: read
+      actions: write
       id-token: write
     
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
+
+      # --- Configurar a versão do Node ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # --- Baixar a libsodium e outras libs ---
+      - name: Instalar dependências
+        run: npm install
 
       - name: Executar Disparos
         env:
