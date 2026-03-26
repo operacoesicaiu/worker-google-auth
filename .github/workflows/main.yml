@@ -45,7 +45,15 @@ jobs:
           else
             echo "Iniciando disparos padrão..."
             
+            # Disparos imediatos
             REPO_DESTINO="operacoesicaiu/worker-hablla-integration" node index.js
             REPO_DESTINO="operacoesicaiu/worker-zoho-integration" node index.js
             REPO_DESTINO="operacoesicaiu/worker-zenvia-integration" node index.js
+            
+            # Aguarda 15 minutos (900 segundos)
+            echo "Aguardando 15 minutos para disparar o worker-sige-auth..."
+            sleep 900
+            
+            # Disparo com atraso
+            REPO_DESTINO="operacoesicaiu/worker-sige-auth" node index.js
           fi
