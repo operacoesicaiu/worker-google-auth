@@ -1,4 +1,4 @@
-name: Teste Relatorio 2 Meses (Manual)
+name: Teste Relatorio
 
 on:
   workflow_dispatch: 
@@ -8,19 +8,17 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: write  # Essencial para gravar o Secret no destino
+      actions: write
       id-token: write
     
     steps:
       - uses: actions/checkout@v4
 
-      # --- NOVO: Configura o Node ---
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # --- NOVO: Instala a biblioteca libsodium ---
       - name: Instalar dependências
         run: npm install
 
@@ -29,8 +27,9 @@ jobs:
           GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
           GH_PAT: ${{ secrets.GH_PAT }}
-          REPO_DESTINO: "operacoesicaiu/worker-zoho-integration" 
+          # ALTERADO: Apontando para o repositório do SIGE
+          REPO_DESTINO: "operacoesicaiu/worker-sige-auth" 
         run: |
-          # Alteração dinâmica do tipo de evento antes da execução
+          # O sed troca o evento padrão pelo de relatório
           sed -i 's/google_token_ready/report_token_ready/g' index.js
           node index.js
