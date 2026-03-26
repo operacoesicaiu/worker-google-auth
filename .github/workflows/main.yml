@@ -44,17 +44,17 @@ jobs:
             REPO_DESTINO="$REPO_MANUAL" node index.js
           else
             echo "Iniciando disparos padrão com intervalos de 5 minutos..."
-            
-            echo "Disparando Hablla..."
-            REPO_DESTINO="operacoesicaiu/worker-hablla-integration" node index.js
-            sleep 300
-            
+
             echo "Disparando Zoho..."
             REPO_DESTINO="operacoesicaiu/worker-zoho-integration" node index.js
             sleep 300
-            
+
             echo "Disparando Zenvia..."
             REPO_DESTINO="operacoesicaiu/worker-zenvia-integration" node index.js
+            sleep 300
+            
+            echo "Disparando Hablla..."
+            REPO_DESTINO="operacoesicaiu/worker-hablla-integration" node index.js
             sleep 300
             
             echo "Disparando SIGE Auth..."
