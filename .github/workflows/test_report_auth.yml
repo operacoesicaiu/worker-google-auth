@@ -1,7 +1,7 @@
 name: Teste Relatorio
 
 on:
-  #workflow_dispatch: 
+  workflow_dispatch: 
 
 jobs:
   test-dispatch:
