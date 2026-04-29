@@ -2,7 +2,7 @@ name: Run Google Auth Worker
 
 on:
   schedule:
-    - cron: '0 9 * * *' # 06:00 AM Brasília
+    - cron: '0 14 * * *' # 06:00 AM Brasília
   #workflow_dispatch:
   #  inputs:
   #    repo_especifico:
