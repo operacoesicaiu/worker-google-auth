@@ -28,7 +28,7 @@ jobs:
           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
           GH_PAT: ${{ secrets.GH_PAT }}
           # ALTERADO: Apontando para o repositório do SIGE
-          REPO_DESTINO: "operacoesicaiu/worker-hablla-integration" 
+          REPO_DESTINO: "operacoesicaiu/worker-sige-auth" 
         run: |
           # O sed troca o evento padrão pelo de relatório
           sed -i 's/google_token_ready/report_token_ready/g' index.js
